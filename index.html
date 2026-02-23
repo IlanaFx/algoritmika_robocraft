@@ -152,14 +152,7 @@ function finishGame(){
   document.getElementById('gameContainer').style.display='none';
   document.getElementById('resultsContainer').style.display='block';
 
-  // Кнопка очистки доступна только после ввода пароля
-  const password = prompt("Введите пароль для очистки результатов");
-  if(password === "admin123"){ 
-    document.getElementById('clearBtn').style.display='inline-block';
-  }
 
-  updateLeaderboard();
-}
 
 function updateLeaderboard(){
   const leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
