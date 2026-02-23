@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Робототехника</title>
+<link rel="icon" href="робот.png" type="image/x-icon">
+<style>
+body { font-family: Arial; text-align:center; background: linear-gradient(135deg, #4e73df, #1cc88a); color:white; margin:0; padding:0;}
+.container { background: rgba(0,0,0,0.3); padding:15px; border-radius:20px; width:95%; max-width:400px; margin:10px auto; box-sizing:border-box;}
+input[type="text"]{padding:12px; font-size:1.2em; width:95%; max-width:380px; margin:5px 0; border-radius:10px; border:1px solid #ccc;}
+button{display:block; width:95%; max-width:380px; margin:8px auto; padding:14px; font-size:1.2em; border:none; border-radius:12px; cursor:pointer; background:#3498db; color:white;}
+button:hover{transform:scale(1.03);}
+.correct{background:#1cc88a;} 
+.wrong{background:#e74a3b;} 
+#nextBtn{background:#f6c23e;color:black;display:none;}
+#answers{display:flex; flex-direction:column;} 
+#timer{font-size:1.2em;margin-bottom:10px;}
+table{width:100%; border-collapse:collapse;} 
+th,td{padding:8px;background: rgba(255,255,255,0.2);}
+#clearBtn{display:none; background:#e74a3b; color:white;}
+</style>
+</head>
+<body>
+
+<h1>🎮 Поймай ошибку программиста</h1>
+
+<!-- Ввод имени -->
+<div class="container" id="loginContainer">
+  <h2>Введите имя и фамилию</h2>
+  <input type="text" id="firstName" placeholder="Имя">
+  <input type="text" id="lastName" placeholder="Фамилия">
+  <button onclick="startGame()">Начать игру</button>
+</div>
+
+<!-- Игра -->
+<div class="container" id="gameContainer" style="display:none;">
+  <div id="timer">Время: 0 сек</div>
+  <h2 id="question"></h2>
+  <div id="answers"></div>
+  <button id="nextBtn" onclick="nextQuestion()">Следующий уровень</button>
+</div>
+
+<!-- Таблица лидеров -->
+<div class="container" id="resultsContainer" style="display:none;">
+  <h2>🏆 Таблица результатов</h2>
+  <table>
+    <thead><tr><th>Место</th><th>Имя</th><th>Очки</th><th>Время (сек)</th></tr></thead>
+    <tbody id="leaderboardBody"></tbody>
+  </table>
+  <button onclick="startNewGame()">Играть снова</button>
+  <button id="clearBtn" onclick="clearLeaderboard()">Очистить результаты</button>
+</div>
+
+<script>
+const quiz = [
+  {question:"Алгоритм — это:",answers:["Случайные действия","Последовательность шагов для решения задачи","Компьютерная игра"],correct:1},
+  {question:"Сколько шагов выполнится в алгоритме?<br>Повторить 3 раза: хлопнуть в ладоши",answers:["1","3","6"],correct:1},
+  {question:"Если число больше 10 — прибавить 5.<br>Число = 12. Какой будет результат?",answers:["12","17","15"],correct:1},
+  {question:"Если число чётное — вывести «Да».<br>Число = 7. Что произойдёт?",answers:["Выведется «Да»","Ничего не произойдёт","Будет ошибка"],correct:1},
+  {question:"Сколько чисел выведется?<br>От 1 до 5 включительно",answers:["4","5","6"],correct:1},
+  {question:"Массив — это:",answers:["Список значений","Одна переменная","Компьютер"],correct:0},
+  {question:"В массиве [5, 8, 10] какой элемент стоит на втором месте?",answers:["5","8","10"],correct:1},
+  {question:"Если температура ниже 0 — идёт снег.<br>Температура = -5. Что произойдёт?",answers:["Будет снег","Будет дождь","Ничего"],correct:0},
+  {question:"Что делает цикл?",answers:["Повторяет действия","Создаёт картинку","Удаляет данные"],correct:0},
+  {question:"Что важнее всего в программировании?",answers:["Логика","Быстро печатать","Красивый компьютер"],correct:0}
+];
+
+let currentQuestion=0, score=0, timer=0, timerInterval=null, playerName="";
+
+function startGame(){
+  const first=document.getElementById('firstName').value.trim();
+  const last=document.getElementById('lastName').value.trim();
+  if(!first||!last){ alert("Введите имя и фамилию!"); return;}
+  playerName = first+" "+last;
+  document.getElementById('loginContainer').style.display='none';
+  document.getElementById('resultsContainer').style.display='none';
+  document.getElementById('gameContainer').style.display='block';
+  currentQuestion=0; score=0;
+  startTimer();
+  loadQuestion();
+}
+
+function startNewGame(){ 
+  document.getElementById('firstName').value="";
+  document.getElementById('lastName').value="";
+  document.getElementById('loginContainer').style.display='block';
+  document.getElementById('resultsContainer').style.display='none';
+  document.getElementById('gameContainer').style.display='none';
+  document.getElementById('nextBtn').textContent="Следующий уровень";
+}
+
+function startTimer(){
+  timer=0;
+  document.getElementById('timer').textContent=`Время: 0 сек`;
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timer++; 
+    document.getElementById('timer').textContent=`Время: ${timer} сек`;
+  },1000);
+}
+
+function loadQuestion(){
+  document.getElementById("nextBtn").style.display="none";
+  const q = quiz[currentQuestion];
+  document.getElementById("question").innerHTML = q.question;
+  const answersDiv=document.getElementById("answers");
+  answersDiv.innerHTML="";
+  q.answers.forEach((ans,i)=>{
+    const btn=document.createElement("button");
+    btn.innerText=ans;
+    btn.onclick=()=>checkAnswer(i);
+    answersDiv.appendChild(btn);
+  });
+}
+
+function checkAnswer(index){
+  const buttons=document.querySelectorAll("#answers button");
+  buttons.forEach((btn,i)=>{
+    btn.disabled=true;
+    if(i===quiz[currentQuestion].correct) btn.classList.add("correct");
+    else if(i===index) btn.classList.add("wrong");
+  });
+  if(index===quiz[currentQuestion].correct) score++;
+
+  if(currentQuestion < quiz.length - 1){
+    document.getElementById("nextBtn").style.display="block";
+  } else {
+    document.getElementById("nextBtn").textContent = "Закончить игру";
+    document.getElementById("nextBtn").style.display="block";
+  }
+}
+
+function nextQuestion(){
+  currentQuestion++;
+  document.getElementById("nextBtn").style.display = "none";
+  if(currentQuestion < quiz.length){
+    loadQuestion();
+  } else {
+    finishGame();
+  }
+}
+
+function finishGame(){
+  clearInterval(timerInterval);
+
+  // Сохраняем результат только на этом устройстве
+  const leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  leaderboard.push({name:playerName, score:score, time:timer});
+  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+  document.getElementById('gameContainer').style.display='none';
+  document.getElementById('resultsContainer').style.display='block';
+
+  // Кнопка очистки доступна только после ввода пароля
+  const password = prompt("Введите пароль для очистки результатов");
+  if(password === "admin123"){ 
+    document.getElementById('clearBtn').style.display='inline-block';
+  }
+
+  updateLeaderboard();
+}
+
+function updateLeaderboard(){
+  const leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  leaderboard.sort((a,b)=>b.score-a.score || a.time-b.time);
+
+  const tbody=document.getElementById('leaderboardBody');
+  tbody.innerHTML="";
+  leaderboard.forEach((entry,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i+1}</td><td>${entry.name}</td><td>${entry.score}</td><td>${entry.time}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function clearLeaderboard(){
+  if(confirm("Очистить все результаты?")){
+    localStorage.removeItem("leaderboard");
+    updateLeaderboard();
+    document.getElementById('clearBtn').style.display='none';
+  }
+}
+
+// Показываем таблицу при загрузке страницы (если уже есть локальные результаты)
+updateLeaderboard();
+</script>
+
+</body>
+</html>
